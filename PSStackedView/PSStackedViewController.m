@@ -650,6 +650,10 @@ enum {
     return overlappedViewController;
 }
 
+- (BOOL)isBeforeiOS5 {
+    return ([[[UIDevice currentDevice] systemVersion] compare:@"5.0" options:NSNumericSearch] == NSOrderedAscending);
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma mark - Touch Handling
 
@@ -911,8 +915,12 @@ enum {
     [container limitToMaxWidth:[self maxControllerWidth]];
     PSSVLog(@"container frame: %@", NSStringFromCGRect(container.frame));
     
-    // relay willAppear and add to subview
-    [viewController viewWillAppear:animated];
+    // In iOS5, viewWillAppear is automatically called when the subview of the view controller
+    // is added in another view, so don't call it here!
+    if ([self isBeforeiOS5]) {
+        // relay willAppear and add to subview
+        [viewController viewWillAppear:animated];
+    }
     
     if (animated) {
         container.alpha = 0.f;
@@ -932,7 +940,12 @@ enum {
     [container layoutIfNeeded];
     //container.width = viewController.view.width; // sync width (after it may has changed in layoutIfNeeded)
     
-    [viewController viewDidAppear:animated];
+    // In iOS5, viewDidAppear is automatically called when the subview of the view controller
+    // is added in another view, so no need to call it here
+    if ([self isBeforeiOS5]) {
+        [viewController viewDidAppear:animated];
+    }
+	
     [viewControllers_ addObject:viewController];
     
     // register stack controller
