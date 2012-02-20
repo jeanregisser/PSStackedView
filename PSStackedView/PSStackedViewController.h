@@ -66,6 +66,10 @@ enum {
 /// expands/collapses stack until entered controller is topmost right
 - (BOOL)displayViewControllerOnRightMost:(UIViewController *)vc animated:(BOOL)animated;
 
+//expand stack until root view is shown
+- (void)displayRootViewControllerAnimated:(BOOL)animated;
+
+
 /// return view controllers that follow a certain view controller. Helper function.
 - (NSArray *)viewControllersAfterViewController:(UIViewController *)viewController;
 
@@ -113,6 +117,9 @@ enum {
 
 /// Property to disable shadows
 @property(nonatomic, assign) BOOL enableShadows;
+
+/// Property to disable dragging past left insets, recommend setting enableBouces to NO when this is set to NO
+@property(nonatomic, assign) BOOL enableDraggingPastInsets;
 
 /// left inset thats always visible. Defaults to 60.
 @property(nonatomic, assign) NSUInteger leftInset;

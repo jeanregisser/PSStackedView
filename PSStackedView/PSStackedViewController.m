@@ -41,6 +41,7 @@ typedef void(^PSSVSimpleBlock)(void);
         unsigned int delegateWillRemoveViewController:1;
         unsigned int delegateDidRemoveViewController:1;
         unsigned int delegateDidPanViewController:1;
+        unsigned int delegateDidAlign:1;
     }delegateFlags_;
 }
 @property(nonatomic, strong) UIViewController *rootViewController;
@@ -62,6 +63,7 @@ typedef void(^PSSVSimpleBlock)(void);
 @synthesize reduceAnimations = reduceAnimations_;
 @synthesize enableBounces = enableBounces_;
 @synthesize enableShadows = enableShadows_;
+@synthesize enableDraggingPastInsets = enableDraggingPastInsets_;
 @dynamic firstVisibleIndex;
 
 #ifdef ALLOW_SWIZZLING_NAVIGATIONCONTROLLER
@@ -93,6 +95,7 @@ typedef void(^PSSVSimpleBlock)(void);
         self.panRecognizer = panRecognizer;
         enableBounces_ = YES;
         enableShadows_ = YES;
+        enableDraggingPastInsets_ = YES;
         
         
 #ifdef ALLOW_SWIZZLING_NAVIGATIONCONTROLLER
@@ -127,6 +130,8 @@ typedef void(^PSSVSimpleBlock)(void);
         delegateFlags_.delegateWillRemoveViewController = [delegate respondsToSelector:@selector(stackedView:willRemoveViewController:)];
         delegateFlags_.delegateDidRemoveViewController = [delegate respondsToSelector:@selector(stackedView:didRemoveViewController:)];
         delegateFlags_.delegateDidPanViewController = [delegate respondsToSelector:@selector(stackedView:didPanViewController:byOffset:)];
+        delegateFlags_.delegateDidAlign = [delegate respondsToSelector:@selector(stackedViewDidAlign:)];
+
     }
 }
 
@@ -157,6 +162,12 @@ typedef void(^PSSVSimpleBlock)(void);
 - (void)delegateDidPanViewController:(UIViewController *)viewController byOffset:(NSInteger)offset {
     if (delegateFlags_.delegateDidPanViewController) {
         [self.delegate stackedView:self didPanViewController:viewController byOffset:offset];
+    }
+}
+
+- (void)delegateDidAlign{
+    if (delegateFlags_.delegateDidAlign) {
+        [self.delegate stackedViewDidAlign:self];
     }
 }
 
@@ -533,10 +544,17 @@ enum {
     }
     
     // hide menu, if first VC is larger than available screen space with floatIndex = 0.0
-    else if (index == 0 && [self.viewControllers count] && [[self.viewControllers objectAtIndex:0] containerView].width >= ([self screenWidth] - self.leftInset)) {
+    else if (index == 0 && [self.viewControllers count] /*&& [[self.viewControllers objectAtIndex:0] containerView].width >= ([self screenWidth] - self.leftInset)*/) {
         self.floatIndex = 0.5f;
         [self alignStackAnimated:YES];
     }
+}
+
+- (void)displayRootViewControllerAnimated:(BOOL)animated{
+    
+    self.floatIndex = 0.0f;
+    [self alignStackAnimated:YES];
+
 }
 
 // iterates controllers and sets width (also, enlarges if requested width is larger than current width)
@@ -708,6 +726,19 @@ enum {
                     leftVCLeftPosition = minimalLeftInset;
                 }
                 leftViewController.containerView.left = leftVCLeftPosition;
+            }
+            
+            if (enableDraggingPastInsets_ == NO)
+            {
+                int stackWidth = (!isTopViewController) ? 0 : (leftViewController) ? leftViewController.view.frame.size.width : (rightViewController) ? rightViewController.view.frame.size.width : 0;
+                int padding  = 45;
+                if ((int)(currentVCLeftPosition-stackWidth) <= (int)leftInset_ ) {
+                    currentVCLeftPosition = leftInset_ + stackWidth;
+                }
+                else if ((int)(currentVCLeftPosition-stackWidth) >= (int)largeLeftInset_ + padding) {
+                    //For a more natural
+                    currentVCLeftPosition = largeLeftInset_ + stackWidth + padding;
+                }
             }
             
             currentViewController.containerView.left = currentVCLeftPosition;
@@ -1231,14 +1262,20 @@ enum {
                                          [self alignStackAnimated:YES duration:animationDuration bounceType:PSSVBounceBack];
                                      }break;
                                          
-                                         // we're done here
                                      case PSSVBounceNone:
+                                         [self delegateDidAlign];
                                      case PSSVBounceBack:
+                                         [self delegateDidAlign];
+
                                      default: {
                                          lastDragOffset_ = 0; // clear last drag offset for the animation
                                          //[self removeAnimationBlockerView];
                                      }break;
                                  }
+                             }else if(finished){
+                                 
+                                 [self delegateDidAlign];
+
                              }
                              
                          }
@@ -1246,6 +1283,8 @@ enum {
     }
     else {
         alignmentBlock();
+        //[self delegateDidAlign];
+
     }
     
 }
