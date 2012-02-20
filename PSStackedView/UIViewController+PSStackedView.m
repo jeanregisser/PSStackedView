@@ -32,7 +32,7 @@
     if (!self.navigationControllerSwizzled) {
         return (UINavigationController *)self.stackController;
     }else {
-        return self.navigationControllerSwizzled;
+        return self.navigationController;
     }
 }
 #endif
