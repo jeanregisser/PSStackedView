@@ -136,6 +136,8 @@ enum {
 ///number of touches
 @property(nonatomic, assign) NSUInteger numberOfTouches;
 
+@property(nonatomic, assign) NSUInteger overlapOffset;
+
 /// left inset thats always visible. Defaults to 60.
 @property(nonatomic, assign) NSUInteger leftInset;
 /// animate setting of the left inset that is always visible

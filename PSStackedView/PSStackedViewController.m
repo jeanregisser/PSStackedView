@@ -69,6 +69,7 @@ typedef void(^PSSVSimpleBlock)(void);
 @synthesize defaultShadowAlpha  = defaultShadowAlpha_;
 @synthesize cornerRadius = cornerRadius_;
 @synthesize numberOfTouches = numberOfTouches_;
+@synthesize overlapOffset = overlapOffset_;
 @dynamic firstVisibleIndex;
 
 #ifdef ALLOW_SWIZZLING_NAVIGATIONCONTROLLER
@@ -108,6 +109,7 @@ typedef void(^PSSVSimpleBlock)(void);
         // set some reasonble defaults
         leftInset_ = 60;
         largeLeftInset_ = 200;
+		overlapOffset_ = 0;
         
         [self configureGestureRecognizer];
 
@@ -454,32 +456,52 @@ enum {
     
     // TODO: currently calculates *all* objects, should cache!
     CGFloat floatIndex = [self nearestValidFloatIndex:self.floatIndex];
+	
+	__block BOOL docked = NO;
+	__block CGFloat accumulatedWidth = 0;
+	__block BOOL dockedFully = YES;
     [self.viewControllers enumerateObjectsWithOptions:0 usingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
         UIViewController *currentVC = (UIViewController *)obj;
         CGFloat leftPos = [self currentLeftInset];
         CGRect leftRect = idx > 0 ? [[frames objectAtIndex:idx-1] CGRectValue] : CGRectZero;
+		
+		accumulatedWidth += currentVC.containerView.width;
         
         if (idx == floorf(floatIndex)) {
-            BOOL dockRight = ![self isFloatIndexBetween:floatIndex] && floatIndex >= 1.f;
-            
+            BOOL dockRight = ![self isFloatIndexBetween:floatIndex] && floatIndex >= 1.f; 
+			
             // should we pan it to the right?
             if (dockRight) {
                 leftPos = [self screenWidth] - currentVC.containerView.width;
+				CGFloat currentMaxX = ([self currentLeftInset] + accumulatedWidth - idx * overlapOffset_);
+				if (currentMaxX < [self screenWidth] && idx == (self.viewControllers.count - 1)) {
+					leftPos -= overlapOffset_;
+					dockedFully = NO;
+				}
+				docked = YES;
             }
         }else if (idx > floatIndex) {
             // connect vc to left vc's right!
-            leftPos = leftRect.origin.x + leftRect.size.width;
+            leftPos = leftRect.origin.x + leftRect.size.width + (docked && dockedFully ? 0 : -(CGFloat)overlapOffset_);
+			if (leftRect.origin.x + leftRect.size.width >= [self screenWidth]) {
+				leftPos += overlapOffset_;
+			}
         }
-        
+
         CGRect currentRect = CGRectMake(leftPos, currentVC.containerView.top, currentVC.containerView.width, currentVC.containerView.height);
         [frames addObject:[NSValue valueWithCGRect:currentRect]];
     }];
+	
     [self.viewControllers enumerateObjectsWithOptions:NSEnumerationReverse usingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
         if(idx < floatIndex && idx < [self.viewControllers count] - 1) {
             CGRect crect = [[frames objectAtIndex:idx] CGRectValue];
             CGRect nrect = [[frames objectAtIndex:idx + 1] CGRectValue];
             
-            CGFloat lpos = nrect.origin.x - crect.size.width;
+            CGFloat lpos = nrect.origin.x - crect.size.width + overlapOffset_;
+			if (nrect.origin.x >= [self screenWidth]) {
+				lpos -= overlapOffset_;
+			}
+			
             lpos = MAX(lpos, [self currentLeftInset]);
             
             CGRect newrect = CGRectMake(lpos, crect.origin.y, crect.size.width, crect.size.height);
@@ -660,7 +682,7 @@ enum {
         leftViewController = tmp;
     }
     
-    BOOL overlapping = leftViewController.containerView.right > rightViewController.containerView.left;
+    BOOL overlapping = leftViewController.containerView.right > rightViewController.containerView.left + overlapOffset_;
     if (overlapping) {
         PSSVLog(@"overlap detected: %@ (%@) with %@ (%@)", leftViewController, NSStringFromCGRect(leftViewController.containerView.frame), rightViewController, NSStringFromCGRect(rightViewController.containerView.frame));
     }
@@ -732,7 +754,7 @@ enum {
                 currentVCLeftPosition += offset;
             }else {
                 // make sure we're connected to the next controller!
-                currentVCLeftPosition = rightViewController.containerView.left - currentViewController.containerView.width;
+                currentVCLeftPosition = rightViewController.containerView.left - currentViewController.containerView.width + overlapOffset_;
             }
             
             // prevent scrolling < minimal width (except for the top view controller - allow stupidness!)
