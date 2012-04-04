@@ -186,7 +186,7 @@
             CAGradientLayer *rightShadow = [self shadowAsInverse:NO];
             self.rightShadowLayer = rightShadow;
         }
-        self.rightShadowLayer.frame = CGRectMake(self.width-cornerRadius_, 0, shadowWidth_, self.controller.view.height);
+        self.rightShadowLayer.frame = CGRectMake(self.width-cornerRadius_, 0, shadowWidth_+cornerRadius_, self.controller.view.height);
         if ([self.layer.sublayers indexOfObjectIdenticalTo:self.rightShadowLayer] != 0) {
             [self.layer insertSublayer:self.rightShadowLayer atIndex:0];
         }
