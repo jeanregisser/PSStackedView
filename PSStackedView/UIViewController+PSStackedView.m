@@ -29,7 +29,7 @@
 #ifdef ALLOW_SWIZZLING_NAVIGATIONCONTROLLER
 /// to maintain minimal changes for your app, we can do some clever swizzling here.
 - (UINavigationController *)navigationControllerSwizzled {
-    if (!self.navigationControllerSwizzled) {
+    if (self.stackController) {
         return (UINavigationController *)self.stackController;
     }else {
         return self.navigationControllerSwizzled;

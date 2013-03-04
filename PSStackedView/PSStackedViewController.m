@@ -120,6 +120,9 @@ typedef void(^PSSVSimpleBlock)(void);
         defaultShadowWidth_ = 60.0f;
         defaultShadowAlpha_ = 0.2f;
         cornerRadius_ = 6.0f;
+        
+        [self addChildViewController:rootViewController_];
+		[rootViewController_ didMoveToParentViewController:self];
 
 #ifdef ALLOW_SWIZZLING_NAVIGATIONCONTROLLER
         PSSVLog("Swizzling UIViewController.navigationController");
@@ -975,6 +978,9 @@ enum {
         viewController.view.width = stackWidth;
     }
     
+    [self addChildViewController:viewController];
+    [viewController didMoveToParentViewController:self];
+    
     // Starting out in portrait, right side up, we see a 20 pixel gap (for status bar???)
     viewController.view.top = 0.f;
     
@@ -1051,11 +1057,11 @@ enum {
         
         // remove from view stack!
         PSSVContainerView *container = lastController.containerView;
-        [lastController viewWillDisappear:animated];
+        [lastController willMoveToParentViewController:nil];
         
         PSSVSimpleBlock finishBlock = ^{
             [container removeFromSuperview];
-            [lastController viewDidDisappear:animated];
+            [lastController removeFromParentViewController];
             [self delegateDidRemoveViewController:lastController];
         };
         
@@ -1455,11 +1461,6 @@ enum {
 - (void)viewWillAppear:(BOOL)animated {
     [super viewWillAppear:animated];
     
-    [self.rootViewController viewWillAppear:animated];
-    for (UIViewController *controller in self.viewControllers) {
-        [controller viewWillAppear:animated];
-    }
-    
     // enlarge/shrinken stack
     [self updateViewControllerSizes];
     [self updateViewControllerMasksAndShadow];    
@@ -1468,29 +1469,14 @@ enum {
 
 - (void)viewDidAppear:(BOOL)animated {
     [super viewDidAppear:animated];
-    
-    [self.rootViewController viewDidAppear:animated];
-    for (UIViewController *controller in self.viewControllers) {
-        [controller viewDidAppear:animated];
-    }
 }
 
 - (void)viewWillDisappear:(BOOL)animated {
     [super viewWillDisappear:animated];
-    
-    [self.rootViewController viewWillDisappear:animated];
-    for (UIViewController *controller in self.viewControllers) {
-        [controller viewWillDisappear:animated];
-    }
 }
 
 - (void)viewDidDisappear:(BOOL)animated {
     [super viewDidDisappear:animated];
-    
-    [self.rootViewController viewDidDisappear:animated];
-    for (UIViewController *controller in self.viewControllers) {
-        [controller viewDidDisappear:animated];
-    }   
 }
 
 - (void)viewDidUnload {
@@ -1515,46 +1501,20 @@ enum {
     }
 }
 
-// event relay
-- (void)willRotateToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation duration:(NSTimeInterval)duration; {
-    //lastVisibleIndexBeforeRotation_ = self.lastVisibleIndex;
-    
-    [rootViewController_ willRotateToInterfaceOrientation:toInterfaceOrientation duration:duration];
-    
-    for (UIViewController *controller in self.viewControllers) {
-        [controller willRotateToInterfaceOrientation:toInterfaceOrientation duration:duration];
-    }    
-}
-
-// event relay
 - (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation; {
-    [rootViewController_ didRotateFromInterfaceOrientation:fromInterfaceOrientation];
-    
     if (self.isReducingAnimations) {
         [self updateViewControllerSizes];
         [self updateViewControllerMasksAndShadow];
-    }
-    
-    for (UIViewController *controller in self.viewControllers) {
-        [controller didRotateFromInterfaceOrientation:fromInterfaceOrientation];
     }
     
     // ensure we're correctly aligned (may be messed up in willAnimate, if panRecognizer is still active)
     [self alignStackAnimated:!self.isReducingAnimations];
 }
 
-// event relay
 - (void)willAnimateRotationToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation duration:(NSTimeInterval)duration; {
-    [rootViewController_ willAnimateRotationToInterfaceOrientation:toInterfaceOrientation duration:duration];
-    
     if (!self.isReducingAnimations) {
         [self updateViewControllerSizes];
         [self updateViewControllerMasksAndShadow];    
-    }
-    
-    // finally relay rotation events
-    for (UIViewController *controller in self.viewControllers) {
-        [controller willAnimateRotationToInterfaceOrientation:toInterfaceOrientation duration:duration];
     }
     
     // enlarge/shrinken stack
