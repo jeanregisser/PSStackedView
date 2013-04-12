@@ -10,5 +10,4 @@ Pod::Spec.new do |s|
   s.requires_arc = true
   s.source_files = 'PSStackedView'
   s.framework    = 'QuartzCore'
-  s.clean_paths  = 'Example'
 end
